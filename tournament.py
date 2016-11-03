@@ -4,6 +4,7 @@
 #
 
 import psycopg2
+import math
 
 
 def connect():
@@ -13,14 +14,40 @@ def connect():
 
 def deleteMatches():
     """Remove all the match records from the database."""
+    QUERY = "UPDATE matches SET wins = 0, matches = 0;"
+
+    conn = connect()
+    c = conn.cursor()
+    c.execute(QUERY)
+    conn.commit()
+    conn.close()
 
 
 def deletePlayers():
     """Remove all the player records from the database."""
+    DELETE_MATCHES = "DELETE FROM matches;"
+    DELETE_PLAYERS = "DELETE FROM players;"
+
+    conn = connect()
+    c = conn.cursor()
+    c.execute(DELETE_MATCHES)
+    c.execute(DELETE_PLAYERS)
+    conn.commit()
+    conn.close()
 
 
 def countPlayers():
     """Returns the number of players currently registered."""
+    QUERY = "SELECT count(*) FROM players;"
+
+    conn = connect()
+    c = conn.cursor()
+    c.execute(QUERY)
+
+    cnt = c.fetchone()[0]
+    conn.close()
+
+    return cnt
 
 
 def registerPlayer(name):
@@ -32,6 +59,19 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
+    INSERT_PLAYER = "INSERT INTO players (name) values (%s) RETURNING id"
+    INSERT_MATCH = "INSERT INTO matches values (%s, %s, %s)"
+
+    conn = connect()
+    c = conn.cursor()
+
+    c.execute(INSERT_PLAYER, (name,))
+    player_id = c.fetchone()[0]
+
+    c.execute(INSERT_MATCH, (player_id, 0, 0))
+    
+    conn.commit()
+    conn.close()
 
 
 def playerStandings():
@@ -47,6 +87,20 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
+    QUERY = '''
+    SELECT players.id, players.name, matches.wins, matches.matches
+    FROM players, matches
+    WHERE players.id = matches.id
+    '''
+    conn = connect()
+    c = conn.cursor()
+    c.execute(QUERY)
+
+    standings = c.fetchall()
+
+    c.close()
+
+    return standings
 
 
 def reportMatch(winner, loser):
@@ -56,7 +110,27 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
- 
+    WINNER = '''
+    UPDATE matches 
+    SET wins = wins + 1, matches = matches + 1
+    WHERE id = %s
+    '''
+
+    LOSER = '''
+    UPDATE matches 
+    SET matches = matches + 1
+    WHERE id = %s
+    '''
+
+    conn = connect()
+    c = conn.cursor()
+
+    c.execute(WINNER, (winner,))
+    c.execute(LOSER, (loser,))
+
+    conn.commit()
+    conn.close()
+
  
 def swissPairings():
     """Returns a list of pairs of players for the next round of a match.
@@ -73,5 +147,10 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
+    
+
+
+
+
 
 
