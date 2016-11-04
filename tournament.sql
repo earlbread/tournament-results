@@ -12,14 +12,14 @@ CREATE DATABASE tournament;
 \c tournament;
 
 CREATE TABLE players (
-    id serial primary key,
-    name text
+    id SERIAL PRIMARY KEY,
+    name TEXT
 );
 
 CREATE TABLE matches (
-    id serial references players,
-    wins integer,
-    matches integer
+    id SERIAL REFERENCES players,
+    wins INTEGER,
+    matches INTEGER
 );
 
 CREATE VIEW player_match as (
