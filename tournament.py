@@ -5,6 +5,7 @@
 
 import psycopg2
 import math
+import random
 
 
 def connect():
@@ -147,8 +148,27 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    
+    conn = connect()
+    c = conn.cursor()
 
+    c.execute("SELECT * FROM max_wins")
+    max_wins = c.fetchone()[0]
+
+    parings = []
+    for wins in xrange(max_wins, -1, -1):
+        c.execute("SELECT * FROM player_match WHERE wins = %s", (wins,))
+        players = c.fetchall()
+        
+        while players:
+            a = random.choice(players)
+            players.remove(a)
+            b = random.choice(players)
+            players.remove(b)
+
+            parings.append((a[0], a[1], b[0], b[1]))
+        
+    conn.close();
+    return parings
 
 
 
