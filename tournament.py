@@ -3,22 +3,29 @@
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
-import psycopg2
 import random
+import psycopg2
 
 
 def connect():
-    """Connect to the PostgreSQL database.  Returns a database connection."""
-    return psycopg2.connect("dbname=tournament")
+    """Connect to the PostgreSQL database.
+
+    Returns a database connection and database cursor
+    """
+    try:
+        conn = psycopg2.connect("dbname=tournament")
+        cursor = conn.cursor()
+        return conn, cursor
+    except:
+        print "DB Connection error occurred"
 
 
 def deleteMatches():
     """Remove all the match records from the database."""
     remove_all_matches = "UPDATE matches SET wins = 0, matches = 0;"
 
-    conn = connect()
-    c = conn.cursor()
-    c.execute(remove_all_matches)
+    conn, cursor = connect()
+    cursor.execute(remove_all_matches)
     conn.commit()
     conn.close()
 
@@ -28,10 +35,9 @@ def deletePlayers():
     delete_matches = "DELETE FROM matches;"
     delete_players = "DELETE FROM players;"
 
-    conn = connect()
-    c = conn.cursor()
-    c.execute(delete_matches)
-    c.execute(delete_players)
+    conn, cursor = connect()
+    cursor.execute(delete_matches)
+    cursor.execute(delete_players)
     conn.commit()
     conn.close()
 
@@ -40,11 +46,10 @@ def countPlayers():
     """Returns the number of players currently registered."""
     get_player_count = "SELECT count(*) FROM players;"
 
-    conn = connect()
-    c = conn.cursor()
-    c.execute(get_player_count)
+    conn, cursor = connect()
+    cursor.execute(get_player_count)
 
-    cnt = c.fetchone()[0]
+    cnt = cursor.fetchone()[0]
     conn.close()
 
     return cnt
@@ -62,13 +67,12 @@ def registerPlayer(name):
     insert_player = "INSERT INTO players (name) values (%s) RETURNING id"
     insert_match = "INSERT INTO matches values (%s, %s, %s)"
 
-    conn = connect()
-    c = conn.cursor()
+    conn, cursor = connect()
 
-    c.execute(insert_player, (name,))
-    player_id = c.fetchone()[0]
+    cursor.execute(insert_player, (name,))
+    player_id = cursor.fetchone()[0]
 
-    c.execute(insert_match, (player_id, 0, 0))
+    cursor.execute(insert_match, (player_id, 0, 0))
 
     conn.commit()
     conn.close()
@@ -88,13 +92,12 @@ def playerStandings():
         matches: the number of matches the player has played
     """
     get_player_standing = 'SELECT * FROM player_match'
-    conn = connect()
-    c = conn.cursor()
-    c.execute(get_player_standing)
+    conn, cursor = connect()
+    cursor.execute(get_player_standing)
 
-    standings = c.fetchall()
+    standings = cursor.fetchall()
 
-    c.close()
+    cursor.close()
 
     return standings
 
@@ -118,11 +121,10 @@ def reportMatch(winner, loser):
     WHERE id = %s
     '''
 
-    conn = connect()
-    c = conn.cursor()
+    conn, cursor = connect()
 
-    c.execute(update_winner, (winner,))
-    c.execute(update_loser, (loser,))
+    cursor.execute(update_winner, (winner,))
+    cursor.execute(update_loser, (loser,))
 
     conn.commit()
     conn.close()
@@ -143,19 +145,18 @@ def swissPairings():
         id2: the second player's unique id
         name2: the second player's name
     """
-    conn = connect()
-    c = conn.cursor()
+    conn, cursor = connect()
 
     get_max_wins = "SELECT * FROM max_wins"
 
-    c.execute(get_max_wins)
-    max_wins = c.fetchone()[0]
+    cursor.execute(get_max_wins)
+    max_wins = cursor.fetchone()[0]
 
     parings = []
     get_players_same_win = "SELECT * FROM player_match WHERE wins = %s"
     for wins in xrange(max_wins, -1, -1):
-        c.execute(get_players_same_win, (wins,))
-        players = c.fetchall()
+        cursor.execute(get_players_same_win, (wins,))
+        players = cursor.fetchall()
 
         while players:
             a = random.choice(players)
