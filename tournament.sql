@@ -21,3 +21,14 @@ CREATE TABLE matches (
     wins integer,
     matches integer
 );
+
+CREATE VIEW player_match as (
+    SELECT players.id, players.name, matches.wins, matches.matches
+    FROM players, matches
+    WHERE players.id = matches.id
+);
+
+CREATE VIEW max_wins as (
+    SELECT max(wins)
+    FROM player_match
+);
