@@ -3,7 +3,6 @@
 # tournament.py -- implementation of a Swiss-system tournament
 #
 
-import random
 import psycopg2
 
 
@@ -13,16 +12,16 @@ def connect():
     Returns a database connection and database cursor
     """
     try:
-        conn = psycopg2.connect("dbname=tournament")
+        conn = psycopg2.connect('dbname=tournament')
         cursor = conn.cursor()
         return conn, cursor
     except:
-        print "DB Connection error occurred"
+        print 'DB Connection error occurred'
 
 
 def deleteMatches():
     """Remove all the match records from the database."""
-    remove_all_matches = "UPDATE matches SET wins = 0, matches = 0;"
+    remove_all_matches = 'DELETE FROM matches;'
 
     conn, cursor = connect()
     cursor.execute(remove_all_matches)
@@ -32,8 +31,8 @@ def deleteMatches():
 
 def deletePlayers():
     """Remove all the player records from the database."""
-    delete_matches = "DELETE FROM matches;"
-    delete_players = "DELETE FROM players;"
+    delete_matches = 'DELETE FROM matches;'
+    delete_players = 'DELETE FROM players;'
 
     conn, cursor = connect()
     cursor.execute(delete_matches)
@@ -44,7 +43,7 @@ def deletePlayers():
 
 def countPlayers():
     """Returns the number of players currently registered."""
-    get_player_count = "SELECT count(*) FROM players;"
+    get_player_count = 'SELECT count(*) FROM players;'
 
     conn, cursor = connect()
     cursor.execute(get_player_count)
@@ -64,15 +63,11 @@ def registerPlayer(name):
     Args:
       name: the player's full name (need not be unique).
     """
-    insert_player = "INSERT INTO players (name) values (%s) RETURNING id"
-    insert_match = "INSERT INTO matches values (%s, %s, %s)"
+    insert_player = 'INSERT INTO players (name) values (%s) RETURNING id'
 
     conn, cursor = connect()
 
     cursor.execute(insert_player, (name,))
-    player_id = cursor.fetchone()[0]
-
-    cursor.execute(insert_match, (player_id, 0, 0))
 
     conn.commit()
     conn.close()
@@ -91,13 +86,14 @@ def playerStandings():
         wins: the number of matches the player has won
         matches: the number of matches the player has played
     """
-    get_player_standing = 'SELECT * FROM player_match'
+    get_player_standings = 'SELECT * FROM player_standings'
+
     conn, cursor = connect()
-    cursor.execute(get_player_standing)
+    cursor.execute(get_player_standings)
 
     standings = cursor.fetchall()
 
-    cursor.close()
+    conn.close()
 
     return standings
 
@@ -109,22 +105,11 @@ def reportMatch(winner, loser):
       winner:  the id number of the player who won
       loser:  the id number of the player who lost
     """
-    update_winner = '''
-    UPDATE matches
-    SET wins = wins + 1, matches = matches + 1
-    WHERE id = %s
-    '''
-
-    update_loser = '''
-    UPDATE matches
-    SET matches = matches + 1
-    WHERE id = %s
-    '''
+    report_match = 'INSERT INTO matches (winner, loser) VALUES (%s, %s)'
 
     conn, cursor = connect()
 
-    cursor.execute(update_winner, (winner,))
-    cursor.execute(update_loser, (loser,))
+    cursor.execute(report_match, (winner, loser))
 
     conn.commit()
     conn.close()
@@ -147,24 +132,17 @@ def swissPairings():
     """
     conn, cursor = connect()
 
-    get_max_wins = "SELECT * FROM max_wins"
+    get_player_standings = 'SELECT id, name from player_standings order by wins'
 
-    cursor.execute(get_max_wins)
-    max_wins = cursor.fetchone()[0]
+    cursor.execute(get_player_standings)
+    standings = cursor.fetchall()
 
     parings = []
-    get_players_same_win = "SELECT * FROM player_match WHERE wins = %s"
-    for wins in xrange(max_wins, -1, -1):
-        cursor.execute(get_players_same_win, (wins,))
-        players = cursor.fetchall()
+    while standings:
+        id1, name1 = standings.pop()
+        id2, name2 = standings.pop()
 
-        while players:
-            a = random.choice(players)
-            players.remove(a)
-            b = random.choice(players)
-            players.remove(b)
-
-            parings.append((a[0], a[1], b[0], b[1]))
+        parings.append((id1, name1, id2, name2))
 
     conn.close()
     return parings
